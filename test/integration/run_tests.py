@@ -24,6 +24,26 @@ reqs = {
     'gpu_memory': 'cuda'
 }
 
+_codes = {
+    'red': '\033[91m',
+    'green': '\033[92m',
+    'cyan': '\033[96m',
+    'bold': '\033[1m',
+    'end': '\033[0m',
+}
+
+
+def _colors_disabled(text, color):
+    return text
+
+
+def _colors_enabled(text, color):
+    return "{begin}{text}{end}".format(
+        begin=_codes.get(color),
+        text=text,
+        end=_codes.get('end'),
+    )
+
 
 def split_tag_list(arg):
     return re.split(r"[,;]", arg) if arg else []
@@ -33,7 +53,7 @@ def output_csv(stats, filename):
     print("Writing stats to: {}".format(filename))
 
     with open(filename, 'w') as f:
-        writer = csv.DictWriter(f, ['test', 'processing_time'])
+        writer = csv.DictWriter(f, ['test', 'processing_time', 'status'])
         writer.writeheader()
         writer.writerows(stats)
 
@@ -62,7 +82,13 @@ def query_capabilities_from_instance(host, port):
     return subprocess.check_output(command, universal_newlines=True)
 
 
+def ignore_gadgetron_capabilities(args):
+    return {}
+
+
 def query_gadgetron_capabilities(args):
+    print("Querying Gadgetron capabilities...")
+
     info_string = query_capabilities_from_instance(args.host, args.port) if args.external else \
                   query_capabilities_from_executable()
 
@@ -148,10 +174,10 @@ def read_test_details(filename):
 
     return {
         'file': filename,
-        'tags': set(tags_from_tags(config['TAGS']) +
-                    tags_from_reqs(config['REQUIREMENTS']) +
+        'tags': set(tags_from_tags(config['tags']) +
+                    tags_from_reqs(config['requirements']) +
                     ['all']),
-        'reqs': rules_from_reqs(config['REQUIREMENTS'])
+        'reqs': rules_from_reqs(config['requirements'])
     }
 
 
@@ -160,10 +186,11 @@ def should_skip_test(test, capabilities, args, skip_handler):
     def key_is_ignored(key):
         return reqs.get(key, None) in args.ignore_requirements
 
-    for rule in [rule for key, rule in test.get('reqs') if not key_is_ignored(key)]:
-        if not rule.is_satisfied(capabilities):
-            skip_handler(test, rule.message)
-            return True
+    if 'all' not in args.ignore_requirements:
+        for rule in [rule for key, rule in test.get('reqs') if not key_is_ignored(key)]:
+            if not rule.is_satisfied(capabilities):
+                skip_handler(test, rule.message)
+                return True
 
     if not any([tag in test.get('tags') for tag in args.only]):
         skip_handler(test, "Test missing required tag.")
@@ -197,6 +224,8 @@ def main():
     def ignore_failure(test):
         args.echo_log()
         failed.append(test)
+        with open('test/stats.json') as f:
+            stats.append(json.loads(f.read()))
 
     def exit_on_failure(_):
         args.echo_log()
@@ -238,8 +267,16 @@ def main():
                         action='store_const', const=echo_log, default=do_not_echo_log,
                         help="Send test logs to stdout on a failed test.")
 
+    parser.add_argument('--disable-color', dest='color_handler', action='store_const',
+                        const=_colors_disabled, default=_colors_enabled,
+                        help="Disable colors in the test script output.")
+
     parser.add_argument('--ignore-requirements', type=split_tag_list, default='none', metavar='tags',
                         help="Run tests with the specified tags regardless of Gadgetron capabilities.")
+    parser.add_argument('--disable-capability-query', action='store_const', dest='capability_query_function',
+                        const=ignore_gadgetron_capabilities,
+                        default=query_gadgetron_capabilities,
+                        help="Disable querying Gadgetron capabilities. Few tests will run unless you force them.")
 
     parser.add_argument('--only', type=split_tag_list, default='all', metavar='tags',
                         help="Only run tests with the specified tags.")
@@ -250,8 +287,7 @@ def main():
 
     args = parser.parse_args()
 
-    print("Querying Gadgetron capabilities...")
-    capabilities = query_gadgetron_capabilities(args)
+    capabilities = args.capability_query_function(args)
 
     files = sorted(set(itertools.chain(*[glob.glob(pattern) for pattern in args.tests])))
     tests = [read_test_details(file) for file in files]
@@ -265,13 +301,14 @@ def main():
             print("\t{} ({})".format(test.get('file'), message))
 
     for i, test in enumerate(tests, start=1):
-        print("\nTest {} of {}: {}\n".format(i, len(tests), test.get('file')))
+        print(args.color_handler("\nTest {} of {}: {}\n".format(i, len(tests), test.get('file')), 'bold'))
 
+        disable_color = ['--disable-colors'] if args.color_handler == _colors_disabled else []
         command = [sys.executable, str(subscript),
                    '-a', str(args.host),
                    '-d', str(args.data_folder),
                    '-t', str(args.test_folder),
-                   '-p', str(args.port)] + args.external + [test.get('file')]
+                   '-p', str(args.port)] + args.external + disable_color + [test.get('file')]
 
         with subprocess.Popen(command) as proc:
             try:
