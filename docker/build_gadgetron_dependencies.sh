@@ -32,9 +32,9 @@ done
 # VERSION & REPO TAGS
 
 ISMRMRD_URL=https://github.com/ismrmrd/ismrmrd.git
-ISMRMRD_REV=c86c89c
+ISMRMRD_REV=feb3040
 SIEMENS_TO_ISMRMRD_URL=https://github.com/ismrmrd/siemens_to_ismrmrd.git
-SIEMENS_TO_ISMRMRD_REV=494963c
+SIEMENS_TO_ISMRMRD_REV=6d0ab3d
 PHILIPS_TO_ISMRMRD_URL=https://github.com/ismrmrd/philips_to_ismrmrd.git
 PHILIPS_TO_ISMRMRD_REV=9ef92a1
 
