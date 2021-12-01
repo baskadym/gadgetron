@@ -65,7 +65,6 @@ def _colors_enabled(text, color):
     )
 
 
-
 def enabled(option):
     return option.lower() in ['true', 'yes', '1', 'enabled']
 
@@ -85,7 +84,6 @@ def siemens_to_ismrmrd(echo_handler, *, input, output, parameters, schema, measu
                "-x", schema,
                "-o", output,
                "-z", measurement] + ([flag] if flag else [])
-
 
     echo_handler(command)
     subprocess.run(command,
