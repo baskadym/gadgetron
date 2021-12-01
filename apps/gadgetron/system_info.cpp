@@ -2,9 +2,11 @@
 #include "system_info.h"
 
 #include "gadgetron_config.h"
-#include "connection/stream/external/Python.h"
-#include "connection/stream/external/Matlab.h"
+#include "connection/nodes/external/Python.h"
+#include "connection/nodes/external/Matlab.h"
+#include "connection/nodes/external/Julia.h"
 #include "log.h"
+#include "Process.h"
 
 
 #if defined(_WIN32)
@@ -77,11 +79,14 @@ namespace Gadgetron::Server::Info {
     }
 
     bool python_support() {
-        return Gadgetron::Server::Connection::Stream::python_available();
+        return Gadgetron::Server::Connection::Nodes::python_available();
     }
 
     bool matlab_support() {
-        return Gadgetron::Server::Connection::Stream::matlab_available();
+        return Gadgetron::Server::Connection::Nodes::matlab_available();
+    }
+    bool julia_support() {
+        return Gadgetron::Server::Connection::Nodes::julia_available();
     }
 
 #if defined USE_CUDA
@@ -96,6 +101,7 @@ namespace Gadgetron::Server::Info {
         int cuda_device_count() {
             int deviceCount = 0;
             auto error = cudaGetDeviceCount(&deviceCount);
+            std::cout << "CUDA DEVICE COUNT "  << deviceCount << " and error number " << error <<std::endl;
 
             if (error ) return 0;
             return deviceCount;
@@ -152,7 +158,7 @@ namespace Gadgetron::Server::Info {
               os << "      - Device " << dev << ": " << CUDA::cuda_device_name(dev) << std::endl;
               os << "         + CUDA Driver Version / Runtime Version: " << CUDA::cuda_driver_version() << "/" << CUDA::cuda_runtime_version() << std::endl;
               os << "         + CUDA Capability Major / Minor version number: " <<  CUDA::cuda_device_capabilities(dev) << std::endl;
-              os << "         + Total amount of global GPU memory: " << CUDA::cuda_device_memory(dev) / (1024 * 1024) << " MB" << std::endl;
+              os << "         + Total amount of global GPU memory: " << std::to_string(CUDA::cuda_device_memory(dev) / (1024 * 1024)) << " MB" << std::endl;
             }
         }
     }
@@ -197,7 +203,7 @@ namespace Gadgetron::Server::Info {
         os << "Gadgetron Version Info" << std::endl;
         os << "  -- Version            : " << gadgetron_version().c_str() << std::endl;
         os << "  -- Git SHA1           : " << gadgetron_build().c_str() << std::endl;
-        os << "  -- System Memory size : " << system_memory() / (1024 * 1024) << " MB" << std::endl;
+        os << "  -- System Memory size : " << std::to_string(system_memory() / (1024 * 1024)) << " MB" << std::endl;
         os << "  -- Python Support     : " << (python_support() ? "YES" : "NO") << std::endl;
         os << "  -- Matlab Support     : " << (matlab_support() ? "YES" : "NO") << std::endl;
         CUDA::print_cuda_information(os);
@@ -209,7 +215,7 @@ namespace Gadgetron::Server::Info {
             std::future<std::string> output_stream;
 
             // cat /sys/module/ipv6/parameters/disable
-            auto error = boost::process::system(
+            auto error = Gadgetron::Process::system(
                 boost::process::search_path("cat"),
                 boost::process::args={"/sys/module/ipv6/parameters/disable"},
                 boost::process::std_in.close(),
