@@ -1,6 +1,5 @@
 #!/bin/bash
 
-ISMRMRD_PYTHON_REV=8c2e93f
 
 if [ "$EUID" -ne 0 ]; then
   echo "Please run as root"
@@ -70,7 +69,7 @@ cd /opt/code &&
 pip3 install -U pip setuptools testresources
 DEBIAN_FRONTEND=noninteractive apt install --no-install-recommends --no-install-suggests --yes python3-tk
 
-# h5py needs to be recompiled to compile agains HDF5 1.10, which is what we install on Ubuntu 20.04
+# h5py needs to be recompiled to compile against HDF5 1.10, which is what we install on Ubuntu 20.04
 pip3 install --no-binary=h5py h5py
 
 # Rest of the Python "stuff"
@@ -89,7 +88,7 @@ pip3 install \
   tk-tools \
   junitparser
 
-env LC_ALL=C.UTF-8 LANG=C.UTF-8 pip3 install git+https://github.com/ismrmrd/ismrmrd-python.git@${ISMRMRD_PYTHON_REV}
+env LC_ALL=C.UTF-8 LANG=C.UTF-8 pip3 install ismrmrd==1.9.5
 
 pip3 install git+https://github.com/gadgetron/gadgetron-python.git
 
