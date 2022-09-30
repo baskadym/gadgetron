@@ -22,10 +22,11 @@ namespace Gadgetron::Server::Connection::Nodes {
         auto module = Process::child(
                 boost::process::search_path("matlab"),
                 boost::process::args={"-batch", "gadgetron.external.main"},
-                env,
-                boost::process::limit_handles,
-                boost::process::std_out > stdout,
-                boost::process::std_err > stderr
+                env
+//                ,
+//                boost::process::limit_handles,
+//                boost::process::std_out > stdout,
+//                boost::process::std_err > stderr
         );
 
         GINFO_STREAM("Started external MATLAB module (pid: " << module.id() << ").");
