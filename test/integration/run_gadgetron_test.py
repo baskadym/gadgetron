@@ -125,7 +125,7 @@ def start_storage_server(*, log, port, storage_folder):
 
 def start_gadgetron_instance(*, log, port, storage_address, env=environment):
     print("Starting Gadgetron instance on port", port)
-    proc = subprocess.Popen(["gadgetron", "-p", port, "-E", storage_address],
+    proc = subprocess.Popen("gadgetron","-p", port,"-s", '9111', "-S", '/root/.gadgetron/storage', "-D", '/root/.gadgetron/storage/database-FIL'],
                             stdout=log,
                             stderr=log,
                             env=env)
